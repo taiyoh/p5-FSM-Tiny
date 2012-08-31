@@ -7,24 +7,24 @@ use FSM::Simple;
 my $count = 0;
 
 my $fsm = FSM::Simple->new({
-	rules => {
-		init => sub {
-			my $state = shift;
-			if ($count < 20) {
-				$state->next('add');
-			}
-			else {
-				$state->next('end');
-			}
-		},
-		add => sub {
-			++$count;
-			shift->next('init');
-		},
-		end => sub {
-			$count *= 5;
-		}
-	}
+    rules => {
+        init => sub {
+            my $state = shift;
+            if ($count < 20) {
+                $state->next('add');
+            }
+            else {
+                $state->next('end');
+            }
+        },
+        add => sub {
+            ++$count;
+            shift->next('init');
+        },
+        end => sub {
+            $count *= 5;
+        }
+    }
 });
 
 $fsm->run;

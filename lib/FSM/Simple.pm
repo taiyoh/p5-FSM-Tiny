@@ -19,80 +19,80 @@ my %Defaults = (
 Class::Accessor::Lite->mk_accessors(keys %Defaults);
 
 sub new {
-	my $package = shift;
-	my %args = $_[1] ? %{ @_ } : %{ $_[0] };
-	my $self = bless +{ %Defaults, %args }, $package;
+    my $package = shift;
+    my %args = $_[1] ? %{ @_ } : %{ $_[0] };
+    my $self = bless +{ %Defaults, %args }, $package;
 
-	$self->rules->{init} ||= FSM::Simple::State->new(code => sub { shift->next('end') });
-	$self->rules->{end}  ||= FSM::Simple::State->new(code => sub {});
+    $self->rules->{init} ||= FSM::Simple::State->new(code => sub { shift->next('end') });
+    $self->rules->{end}  ||= FSM::Simple::State->new(code => sub {});
 
-	for my $key (keys %{ $self->rules }) {
-		my $s = $self->rules->{$key};
-		$self->register($key, $s) if ref $s eq 'CODE';
-	}
+    for my $key (keys %{ $self->rules }) {
+        my $s = $self->rules->{$key};
+        $self->register($key, $s) if ref $s eq 'CODE';
+    }
 
-	return $self;
+    return $self;
 }
 
 sub _log { warn "[FSM::Simele DEBUG] ".join(' ', @_) . "\n" if $DEBUG }
 
 sub register {
-	my $self = shift;
-	my ($key, $code) = @_;
-	_log("register: ${key}");
-	$self->rules->{$key} = FSM::Simple::State->new(code => $code);
+    my $self = shift;
+    my ($key, $code) = @_;
+    _log("register: ${key}");
+    $self->rules->{$key} = FSM::Simple::State->new(code => $code);
 }
 
 sub unregister {
-	my ($self, $key) = @_;
-	_log("unregister: ${key}");
-	delete $self->rules->{$key};
+    my ($self, $key) = @_;
+    _log("unregister: ${key}");
+    delete $self->rules->{$key};
 }
 
 sub step {
-	my $self = shift;
-	_log("step start: " . $self->current);
-	my $st = $self->rules->{$self->current} or return;
-	$st->run(@_);
-	my $next = $st->next || '';
-	if ($self->rules->{$next}) {
-		$self->current($next);
-	}
-	else {
-		$self->current('');
-	}
-	return 1;
+    my $self = shift;
+    _log("step start: " . $self->current);
+    my $st = $self->rules->{$self->current} or return;
+    $st->run(@_);
+    my $next = $st->next || '';
+    if ($self->rules->{$next}) {
+        $self->current($next);
+    }
+    else {
+        $self->current('');
+    }
+    return 1;
 }
 
 sub run {
-	my $self = shift;
-	my @args = @_;
-	while (1) {
-		if ($self->current eq $self->finish) {
-			$self->step(@args);
-			last;
-		}
-		$self->step(@args) or last;
-	}
+    my $self = shift;
+    my @args = @_;
+    while (1) {
+        if ($self->current eq $self->finish) {
+            $self->step(@args);
+            last;
+        }
+        $self->step(@args) or last;
+    }
 }
 
 package FSM::Simple::State;
 
 sub new {
-	my $package = shift;
-	my %args = @_;
-	bless \%args, $package;
+    my $package = shift;
+    my %args = @_;
+    bless \%args, $package;
 }
 
 sub next {
-	my ($self, $v) = @_;
-	$self->{next} = $v if @_ > 1;
-	$self->{next};
+    my ($self, $v) = @_;
+    $self->{next} = $v if @_ > 1;
+    $self->{next};
 }
 
 sub run {
-	my $self = shift;
-	$self->{code}->($self, @_);
+    my $self = shift;
+    $self->{code}->($self, @_);
 }
 
 1;
