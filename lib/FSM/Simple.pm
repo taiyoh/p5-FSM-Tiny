@@ -83,6 +83,7 @@ sub run {
         $self->on_transition->($self, @args);
     }
     $self->on_exit->($self, @args);
+    $self;
 }
 
 package FSM::Simple::State;
