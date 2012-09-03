@@ -11,9 +11,12 @@ our $DEBUG = 0;
 use Class::Accessor::Lite;
 
 my %Defaults = (
-    current => 'init',
-    finish  => 'end',
-    rules   => {}
+    current  => 'init',
+    finish   => 'end',
+    rules    => {},
+    on_enter => sub {},
+    on_exit  => sub {},
+    on_transition => sub {}
 );
 
 Class::Accessor::Lite->mk_accessors(keys %Defaults);
@@ -23,8 +26,11 @@ sub new {
     my %args = $_[1] ? %{ @_ } : %{ $_[0] };
     my $self = bless +{ %Defaults, %args }, $package;
 
-    $self->rules->{init} ||= FSM::Simple::State->new(code => sub { shift->next('end') });
-    $self->rules->{end}  ||= FSM::Simple::State->new(code => sub {});
+    my $init = $self->current;
+    my $end  = $self->finish;
+
+    $self->rules->{$init} ||= FSM::Simple::State->new(code => sub { shift->next($end) });
+    $self->rules->{$end}  ||= FSM::Simple::State->new(code => sub {});
 
     for my $key (keys %{ $self->rules }) {
         my $s = $self->rules->{$key};
@@ -67,13 +73,16 @@ sub step {
 sub run {
     my $self = shift;
     my @args = @_;
+    $self->on_enter->($self, @args);
     while (1) {
         if ($self->current eq $self->finish) {
             $self->step(@args);
             last;
         }
         $self->step(@args) or last;
+        $self->on_transition->($self, @args);
     }
+    $self->on_exit->($self, @args);
 }
 
 package FSM::Simple::State;
