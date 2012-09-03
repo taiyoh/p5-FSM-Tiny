@@ -6,38 +6,32 @@ use FSM::Simple;
 
 #++$FSM::Simple::DEBUG;
 
-my $count = 0;
-my $str   = '';
-
 my $fsm = FSM::Simple->new({
-    on_enter => sub { $str .= "foo" },
-    on_transition => sub { $str .= "bar" },
-    on_exit => sub { $str .= "baz" },
-    rules => {
-        init => sub {
-            my $state = shift;
-            if ($count < 20) {
-                $state->next('add');
-            }
-            else {
-                $state->next('end');
-            }
-        },
-        add => sub {
-            ++$count;
-            shift->next('init');
-        },
-        end => sub {
-            $count *= 5;
-        }
-    }
+    on_enter      => sub {
+        my $context = shift;
+        $context->{count} = 0;
+        $context->{str}   = "foo";
+    },
+    on_transition => sub { shift->{str} .= "bar" },
+    on_exit       => sub { shift->{str} .= "baz" }
 });
+
+$fsm->register(init => sub {}, [
+    add => sub { shift->{count} < 20 },
+    end => sub { shift->{count} >= 20 }
+]);
+
+$fsm->register(add => sub { ++shift->{count} }, [
+    init => 1
+]);
+
+$fsm->register(end => sub { shift->{count} *= 5 });
 
 $fsm->run;
 
-is $count, 100, "state machine ran";
+is $fsm->context->{count}, 100, "state machine ran";
 
 # (init -> add (-> init)) x 20 + end
-is $str, "foo".("bar" x 41)."baz", "on_* event correctly fired";
+is $fsm->context->{str}, "foo".("bar" x 41)."baz", "on_* event correctly fired";
 
 done_testing;

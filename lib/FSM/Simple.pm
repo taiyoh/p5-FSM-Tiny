@@ -14,6 +14,7 @@ my %Defaults = (
     current  => 'init',
     finish   => 'end',
     rules    => {},
+    context  => {},
     on_enter => sub {},
     on_exit  => sub {},
     on_transition => sub {}
@@ -29,12 +30,19 @@ sub new {
     my $init = $self->current;
     my $end  = $self->finish;
 
-    $self->rules->{$init} ||= FSM::Simple::State->new(code => sub { shift->next($end) });
+    $self->rules->{$init} ||= FSM::Simple::State->new(code => sub {}, guards => [ end => 1 ]);
     $self->rules->{$end}  ||= FSM::Simple::State->new(code => sub {});
 
     for my $key (keys %{ $self->rules }) {
         my $s = $self->rules->{$key};
-        $self->register($key, $s) if ref $s eq 'CODE';
+        if (my $r = ref $s) {
+            if ($r eq 'ARRAY') {
+                $self->register($key, @$s);
+            }
+            elsif ($r eq 'CODE') {
+                $self->register($key, $s);
+            }
+        }
     }
 
     return $self;
@@ -44,9 +52,15 @@ sub _log { warn "[FSM::Simele DEBUG] ".join(' ', @_) . "\n" if $DEBUG }
 
 sub register {
     my $self = shift;
-    my ($key, $code) = @_;
+    my ($key, $code, $guards) = @_;
+    $guards ||= [];
     _log("register: ${key}");
-    $self->rules->{$key} = FSM::Simple::State->new(code => $code);
+    return if (ref($code) || '') ne 'CODE';
+    return if !scalar(@$guards) && $self->finish ne $key;
+    $self->rules->{$key} = FSM::Simple::State->new(
+        code   => $code,
+        guards => $guards
+    );
 }
 
 sub unregister {
@@ -57,32 +71,27 @@ sub unregister {
 
 sub step {
     my $self = shift;
-    _log("step start: " . $self->current);
     my $st = $self->rules->{$self->current} or return;
-    $st->run(@_);
-    my $next = $st->next || '';
-    if ($self->rules->{$next}) {
-        $self->current($next);
-    }
-    else {
-        $self->current('');
-    }
+    $st->run($self->context);
+    $self->current($st->next($self->context));
+    _log("next -> " . $self->current);
     return 1;
 }
 
 sub run {
     my $self = shift;
-    my @args = @_;
-    $self->on_enter->($self, @args);
+    $self->context(+{ %{ $self->context }, %{ $_[0] || {} } });
+    local $_ = $self->context;
+    $self->on_enter->($self->context);
     while (1) {
         if ($self->current eq $self->finish) {
-            $self->step(@args);
+            $self->step;
             last;
         }
-        $self->step(@args) or last;
-        $self->on_transition->($self, @args);
+        $self->step or last;
+        $self->on_transition->($self->context);
     }
-    $self->on_exit->($self, @args);
+    $self->on_exit->($self->context);
     $self;
 }
 
@@ -91,18 +100,54 @@ package FSM::Simple::State;
 sub new {
     my $package = shift;
     my %args = @_;
+    my @guards = @{ $args{guards} || [] };
+    my @list;
+    while (@guards) {
+        my ($key, $code) = splice @guards, 0, 2;
+        $code = sub { $code } if (ref($code) || '') ne 'CODE';
+        push @list, FSM::Simple::Guard->new(
+            key  => $key,
+            code => $code
+        );
+    }
+    $args{guards} = \@list;
     bless \%args, $package;
 }
 
 sub next {
-    my ($self, $v) = @_;
-    $self->{next} = $v if @_ > 1;
-    $self->{next};
+    my ($self, $context) = @_;
+    for my $guard (@{ $self->{guards} }) {
+        return $guard->key if $guard->check($context);
+    }
+    return '';
 }
 
 sub run {
-    my $self = shift;
-    $self->{code}->($self, @_);
+    my ($self, $context) = @_;
+    local $_ = $context;
+    $self->{code}->($context);
+}
+
+package FSM::Simple::Guard;
+
+sub key { shift->{key} }
+
+sub code { shift->{code} }
+
+sub new {
+    my $package = shift;
+    my %args = @_;
+
+    bless +{
+        key  => '',
+        code => sub { 1 },
+        %args
+    }, $package;
+}
+
+sub check {
+    my ($self, $context) = @_;
+    return $self->code->($context);
 }
 
 1;
