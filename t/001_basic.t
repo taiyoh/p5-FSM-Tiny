@@ -8,24 +8,23 @@ use FSM::Simple;
 
 my $fsm = FSM::Simple->new({
     on_enter      => sub {
-        my $context = shift;
-        $context->{count} = 0;
-        $context->{str}   = "foo";
+        $_->{count} = 0;
+        $_->{str}   = "foo";
     },
-    on_transition => sub { shift->{str} .= "bar" },
-    on_exit       => sub { shift->{str} .= "baz" }
+    on_transition => sub { $_->{str} .= "bar" },
+    on_exit       => sub { $_->{str} .= "baz" }
 });
 
 $fsm->register(init => sub {}, [
-    add => sub { shift->{count} < 20 },
-    end => sub { shift->{count} >= 20 }
+    add => sub { $_->{count} < 20 },
+    end => sub { $_->{count} >= 20 }
 ]);
 
-$fsm->register(add => sub { ++shift->{count} }, [
+$fsm->register(add => sub { ++$_->{count} }, [
     init => 1
 ]);
 
-$fsm->register(end => sub { shift->{count} *= 5 });
+$fsm->register(end => sub { $_->{count} *= 5 });
 
 $fsm->run;
 

@@ -5,7 +5,6 @@ use strict;
 use warnings;
 
 our $VERSION = '0.01';
-
 our $DEBUG = 0;
 
 use Class::Accessor::Lite;
@@ -13,11 +12,8 @@ use Class::Accessor::Lite;
 my %Defaults = (
     current  => 'init',
     finish   => 'end',
-    rules    => {},
-    context  => {},
-    on_enter => sub {},
-    on_exit  => sub {},
-    on_transition => sub {}
+    (map { $_ => {} } qw/rules context/),
+    (map { $_ => sub {} } qw/on_enter on_exit on_transition/)
 );
 
 Class::Accessor::Lite->mk_accessors(keys %Defaults);
@@ -55,8 +51,7 @@ sub register {
     my ($key, $code, $guards) = @_;
     $guards ||= [];
     _log("register: ${key}");
-    return if (ref($code) || '') ne 'CODE';
-    return if !scalar(@$guards) && $self->finish ne $key;
+    return if (ref($code) || '') ne 'CODE' || (!scalar(@$guards) && $self->finish ne $key);
     $self->rules->{$key} = FSM::Simple::State->new(
         code   => $code,
         guards => $guards
@@ -104,10 +99,9 @@ sub new {
     my @list;
     while (@guards) {
         my ($key, $code) = splice @guards, 0, 2;
-        $code = sub { $code } if (ref($code) || '') ne 'CODE';
         push @list, FSM::Simple::Guard->new(
             key  => $key,
-            code => $code
+            code => (ref($code) || '') ne 'CODE' ? sub { $code } : $code
         );
     }
     $args{guards} = \@list;
@@ -137,12 +131,7 @@ sub code { shift->{code} }
 sub new {
     my $package = shift;
     my %args = @_;
-
-    bless +{
-        key  => '',
-        code => sub { 1 },
-        %args
-    }, $package;
+    bless +{ key  => '', code => sub { 1 }, %args }, $package;
 }
 
 sub check {
