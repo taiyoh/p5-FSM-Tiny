@@ -1,21 +1,21 @@
-This is Perl module FSM::Simple.
+This is Perl module FSM::Tiny.
 
 INSTALLATION
 
 Type the following command:
 
-    $ curl -L http://cpanmin.us | perl - FSM::Simple
+    $ curl -L http://cpanmin.us | perl - FSM::Tiny
 
 Or install cpanm and then run the following command to install
-FSM::Simple:
+FSM::Tiny:
 
-    $ cpanm FSM::Simple
+    $ cpanm FSM::Tiny
 
 If you get an archive of this distribution, unpack it and build it
 as per the usual:
 
-    $ tar xzf FSM-Simple-$version.tar.gz
-    $ cd FSM-Simple-$version
+    $ tar xzf FSM-Tiny-$version.tar.gz
+    $ cd FSM-Tiny-$version
     $ perl Makefile.PL
     $ make && make test
 
@@ -25,9 +25,9 @@ Then install it:
 
 DOCUMENTATION
 
-FSM::Simple documentation is available as in POD. So you can do:
+FSM::Tiny documentation is available as in POD. So you can do:
 
-    $ perldoc FSM::Simple
+    $ perldoc FSM::Tiny
 
 to read the documentation online with your favorite pager.
 

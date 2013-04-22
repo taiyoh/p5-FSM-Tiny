@@ -1,4 +1,4 @@
-# for FSM-Simple
+# for FSM-Tiny
 # Makefile.PL
 Module::Install
 Module::Install::AuthorTests

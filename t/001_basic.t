@@ -2,11 +2,11 @@
 use strict;
 use Test::More;
 
-use FSM::Simple;
+use FSM::Tiny;
 
-#++$FSM::Simple::DEBUG;
+#++$FSM::Tiny::DEBUG;
 
-my $fsm = FSM::Simple->new({
+my $fsm = FSM::Tiny->new({
     on_enter      => sub {
         $_->{count} = 0;
         $_->{str}   = "foo";

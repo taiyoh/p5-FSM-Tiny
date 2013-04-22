@@ -1,4 +1,4 @@
-package FSM::Simple;
+package FSM::Tiny;
 
 # http://www.crsr.net/Programming_Languages/PerlAutomata.html
 use strict;
@@ -10,8 +10,7 @@ our $DEBUG = 0;
 use Class::Accessor::Lite;
 
 my %Defaults = (
-    current  => 'init',
-    finish   => 'end',
+    current  => '',
     (map { $_ => {} } qw/rules context/),
     (map { $_ => sub {} } qw/on_enter on_exit on_transition/)
 );
@@ -23,12 +22,6 @@ sub new {
     my %args = $_[1] ? %{ @_ } : %{ $_[0] };
     my $self = bless +{ %Defaults, %args }, $package;
 
-    my $init = $self->current;
-    my $end  = $self->finish;
-
-    $self->rules->{$init} ||= FSM::Simple::State->new(code => sub {}, guards => [ end => 1 ]);
-    $self->rules->{$end}  ||= FSM::Simple::State->new(code => sub {});
-
     for my $key (keys %{ $self->rules }) {
         my $s = $self->rules->{$key};
         if (my $r = ref $s) {
@@ -38,6 +31,9 @@ sub new {
             elsif ($r eq 'CODE') {
                 $self->register($key, $s);
             }
+        }
+        else {
+            delete $self->rules->{$key};
         }
     }
 
@@ -49,10 +45,10 @@ sub _log { warn "[FSM::Simele DEBUG] ".join(' ', @_) . "\n" if $DEBUG }
 sub register {
     my $self = shift;
     my ($key, $code, $guards) = @_;
+    $self->current($key) unless $self->current;
     $guards ||= [];
     _log("register: ${key}");
-    return if (ref($code) || '') ne 'CODE' || (!scalar(@$guards) && $self->finish ne $key);
-    $self->rules->{$key} = FSM::Simple::State->new(
+    $self->rules->{$key} = FSM::Tiny::State->new(
         code   => $code,
         guards => $guards
     );
@@ -79,7 +75,7 @@ sub run {
     local $_ = $self->context;
     $self->on_enter->($self->context);
     while (1) {
-        if ($self->current eq $self->finish) {
+        if (!@{$self->rules->{$self->current}{guards}}) {
             $self->step;
             last;
         }
@@ -90,7 +86,7 @@ sub run {
     $self;
 }
 
-package FSM::Simple::State;
+package FSM::Tiny::State;
 
 sub new {
     my $package = shift;
@@ -99,7 +95,7 @@ sub new {
     my @list;
     while (@guards) {
         my ($key, $code) = splice @guards, 0, 2;
-        push @list, FSM::Simple::Guard->new(
+        push @list, FSM::Tiny::Guard->new(
             key  => $key,
             code => (ref($code) || '') ne 'CODE' ? sub { $code } : $code
         );
@@ -122,7 +118,7 @@ sub run {
     $self->{code}->($context);
 }
 
-package FSM::Simple::Guard;
+package FSM::Tiny::Guard;
 
 sub key { shift->{key} }
 
@@ -140,29 +136,97 @@ sub check {
 }
 
 1;
+__END__
+
 =head1 NAME
 
-FSM::Simple - Perl extention to do something
+FSM::Tiny - tiny implementation of finite state machine
 
 =head1 VERSION
 
-This document describes FSM::Simple version 0.01.
+This document describes FSM::Tiny version 0.01.
 
 =head1 SYNOPSIS
 
-    use FSM::Simple;
+    use FSM::Tiny;
+    
+    my $fsm = FSM::Tiny->new({
+        on_enter => sub {
+            $_->{count} = 0;
+        }
+    });
+    
+    $fsm->register(init => sub {}, [
+        add => sub { $_->{count} < 20 },
+        end => sub { $_->{count} >= 20 }
+    ]);
+    
+    $fsm->register(add => sub { ++$_->{count} }, [
+        init => 1
+    ]);
+    
+    $fsm->register(end => sub { $_->{count} *= 5 });
+    
+    $fsm->run;
+
+    print $fsm->context->{count}; # => 100
+
 
 =head1 DESCRIPTION
 
-# TODO
+This module is tiny implementation of finite state machine.
+this provides more simpler interface and code than any cpan's FSM::* modules.
 
-=head1 INTERFACE
+=head2 ATTRIBUTES
 
-=head2 Functions
+=head3 C<< current >>
 
-=head3 C<< hello() >>
+define current state name for this machine.
 
-# TODO
+=head3 C<< rules >>
+
+same as register function.
+
+=head3 C<< context >>
+
+this is global variable of machine.
+in state behavior(as function) and guard function, it is read as $_
+
+=head3 C<< on_enter >>
+
+it calls when machine transitions start.
+
+=head3 C<< on_transition >>
+
+it calls in between transitions.
+
+=head3 C<< on_exit >>
+
+it calls when machine transitions end.
+
+=head2 METHODS
+
+=head3 C<< new(%args) >>
+
+you can define all rules and attributes in this initializer.
+
+=head3 C<< register($state_name => $state_fn, [%conditions]) >>
+
+registering state, state behavior(as function), and conditions for transition.
+%conditions is defined follows:
+
+    [
+      destination1 => sub { !!it_should_move_to_destination1_or_not() },
+      destination2 => sub { !!it_should_move_to_destination2_or_not() }
+    ]
+
+=head3 C<< step >>
+
+it run one transition.
+
+=head3 C<< run >>
+
+it makes run until transitions end.
 
 =head1 DEPENDENCIES
 
@@ -180,11 +244,11 @@ L<perl>
 
 =head1 AUTHOR
 
-<<YOUR NAME HERE>> E<lt><<YOUR EMAIL ADDRESS HERE>>E<gt>
+<Taiyoh Tanaka> E<lt><sun.basix@gmail.com>E<gt>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2012, <<YOUR NAME HERE>>. All rights reserved.
+Copyright (c) 2013, <Taiyoh Tanaka>. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

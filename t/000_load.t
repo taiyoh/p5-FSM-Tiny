@@ -3,7 +3,7 @@ use strict;
 use Test::More tests => 1;
 
 BEGIN {
-    use_ok 'FSM::Simple';
+    use_ok 'FSM::Tiny';
 }
 
-diag "Testing FSM::Simple/$FSM::Simple::VERSION";
+diag "Testing FSM::Tiny/$FSM::Tiny::VERSION";

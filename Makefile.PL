@@ -24,7 +24,7 @@ BEGIN {
 }
 use inc::Module::Install;
 
-all_from 'lib/FSM/Simple.pm';
+all_from 'lib/FSM/Tiny.pm';
 
 requires 'Class::Accessor::Lite';
 
@@ -38,7 +38,7 @@ author_tests 'xt';
 
 
 clean_files qw(
-    FSM-Simple-*
+    FSM-Tiny-*
     *.stackdump
     cover_db *.gcov *.gcda *.gcno
     nytprof
