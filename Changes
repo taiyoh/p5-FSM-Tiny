@@ -1,4 +1,7 @@
 Revision history for Perl extension FSM::Tiny
 
+0.02
+    - fixed for fail condition
+
 0.01
     - original version; created by dim

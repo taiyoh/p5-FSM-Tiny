@@ -4,7 +4,7 @@ package FSM::Tiny;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 our $DEBUG = 0;
 
 use Class::Accessor::Lite;
@@ -64,7 +64,7 @@ sub step {
     my $self = shift;
     my $st = $self->rules->{$self->current} or return;
     $st->run($self->context);
-    $self->current($st->next($self->context));
+    $self->current($st->next($self->context) || $self->context);
     _log("next -> " . $self->current);
     return 1;
 }
@@ -144,7 +144,7 @@ FSM::Tiny - tiny implementation of finite state machine
 
 =head1 VERSION
 
-This document describes FSM::Tiny version 0.01.
+This document describes FSM::Tiny version 0.02.
 
 =head1 SYNOPSIS
 
